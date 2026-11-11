@@ -47,10 +47,31 @@ FINDINGS="$root/rootfs/usr/local/bin/cve-findings"
 echo "# cve-findings against sample-grype.json (2 fixable criticals: a deb and an embedded binary)"
 findings=$("$FINDINGS" < "$FIXTURE")
 check "findings line count"        "2" "$(grep -c . <<<"$findings")"
-check "deb finding (libtest)"      "cve=CVE-TEST-0001 pkg=libtest type=deb installed=1.0.0 fix=1.2.3 net=1 path=/var/lib/dpkg/status" "$(grep 'pkg=libtest' <<<"$findings")"
-check "embedded-binary (node)"     "cve=CVE-TEST-0002 pkg=node type=binary installed=25.2.1 fix=2.0.0 net=1 path=/usr/local/bin/node" "$(grep 'pkg=node' <<<"$findings")"
+check "deb finding, AV:N -> net=1" "cve=CVE-TEST-0001 pkg=libtest type=deb installed=1.0.0 fix=1.2.3 net=1 path=/var/lib/dpkg/status" "$(grep 'pkg=libtest' <<<"$findings")"
+check "embedded-binary, no vector -> net=?" "cve=CVE-TEST-0002 pkg=node type=binary installed=25.2.1 fix=2.0.0 net=? path=/usr/local/bin/node" "$(grep 'pkg=node' <<<"$findings")"
 check "findings empty on clean"    "" "$(printf '{"matches":[]}' | "$FINDINGS")"
 check "findings skip non-fixable"  "0" "$(printf '{"matches":[{"vulnerability":{"id":"X","severity":"Critical","fix":{"state":"not-fixed"}},"artifact":{"name":"p"}}]}' | "$FINDINGS" | grep -c .)"
+# a present vector that is NOT network -> net=0 (not inferred reachable)
+net0=$(printf '{"matches":[{"vulnerability":{"id":"CVE-Z","severity":"Critical","fix":{"state":"fixed","versions":["9"]},"cvss":[{"vector":"CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}]},"artifact":{"name":"q","version":"1","type":"deb","locations":[{"path":"/p"}]}}]}' | "$FINDINGS")
+check "present vector, not AV:N -> net=0" "cve=CVE-Z pkg=q type=deb installed=1 fix=9 net=0 path=/p" "$net0"
+
+echo "# cve-scan emits finding lines into cve.status (integration, mock grype)"
+work=$(mktemp -d); mock="$work/grype"
+cat > "$mock" <<MOCK
+#!/usr/bin/env bash
+case "\$1" in
+  db) [ "\$2" = status ] && { echo '{"valid":true,"built":"'"\$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}'; exit 0; }; exit 0 ;;
+  *) cat "$FIXTURE" ;;   # any source ref -> the fixture JSON
+esac
+MOCK
+chmod +x "$mock"
+printf 'quay.io/crunchtools/alpha\n' > "$work/fleet.conf"
+GRYPE_BIN="$mock" CLASSIFY_BIN="$root/rootfs/usr/local/bin/cve-classify" FINDINGS_BIN="$root/rootfs/usr/local/bin/cve-findings" \
+  STATE_DIR="$work" FLEET_CONF="$work/fleet.conf" "$root/rootfs/usr/local/bin/cve-scan" >/dev/null 2>&1
+check "cve.status has the item count line" "1" "$(grep -c '^CVE item=quay.io/crunchtools/alpha:latest .*fix_crit=2' "$work/cve.status" 2>/dev/null)"
+check "cve.status has a finding line"      "cve=CVE-TEST-0001 pkg=libtest type=deb installed=1.0.0 fix=1.2.3 net=1 path=/var/lib/dpkg/status" "$(sed -n 's/^CVE finding item=quay.io\/crunchtools\/alpha:latest //p' "$work/cve.status" 2>/dev/null | grep 'pkg=libtest')"
+check "2 finding lines for the image"      "2" "$(grep -c '^CVE finding item=quay.io/crunchtools/alpha:latest ' "$work/cve.status" 2>/dev/null)"
+rm -rf "$work"
 
 if [ "$fail" -eq 0 ]; then echo "PASS"; else echo "SOME TESTS FAILED"; fi
 exit "$fail"
