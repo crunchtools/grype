@@ -6,6 +6,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- `cve-findings`: per fixable-Critical bump detail (image, CVE id, package, type,
+  installed version, fix version, network flag, artifact path). `cve.status` now
+  carries a `CVE finding ...` line per fixable Critical alongside the counts —
+  the actionable "what to bump, from what, to what, and where it lives", which a
+  same-commit rebuild cannot deliver (most fleet fixable-criticals are pinned
+  runtime/module versions, so the fix is a bump, not a rebuild). The path
+  distinguishes an embedded binary (bump the FROM/runtime) from a go.mod entry.
+
+
 ## [0.1.0] - 2026-11-11
 
 ### Added

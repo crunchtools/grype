@@ -6,14 +6,16 @@
         "id": "CVE-TEST-0001", "severity": "Critical",
         "fix": { "state": "fixed", "versions": ["1.2.3"] },
         "cvss": [ { "version": "3.1", "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "metrics": { "baseScore": 9.8 } } ]
-      }
+      },
+      "artifact": { "name": "libtest", "version": "1.0.0", "type": "deb", "locations": [ { "path": "/var/lib/dpkg/status" } ] }
     },
     {
       "vulnerability": {
         "id": "CVE-TEST-0002", "severity": "Critical",
         "fix": { "state": "fixed", "versions": ["2.0.0"] },
         "cvss": []
-      }
+      },
+      "artifact": { "name": "node", "version": "25.2.1", "type": "binary", "locations": [ { "path": "/usr/local/bin/node" } ] }
     },
     {
       "vulnerability": {
