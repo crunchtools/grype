@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-11
+
 ### Added
 - `cve-findings`: per fixable-Critical bump detail (image, CVE id, package, type,
   installed version, fix version, network flag, artifact path). `cve.status` now
