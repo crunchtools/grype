@@ -64,3 +64,22 @@ podman build -f Containerfile .  # build the image
 
 The fleet list is `fleet-images.conf`; on gloval the unit mounts the host's
 authoritative list over it. Licensed AGPL-3.0-or-later.
+
+## Deployment notes (gloval)
+
+The oneshot (`deploy/systemd/grype.crunchtools.com.service`) is started by a 6h
+Hermes job on Kagetora (no host `.timer`), pinned to a release tag with no
+auto-update, exactly like the deployer.
+
+- **`/tmp` must be a disk volume, never `--tmpfs`.** grype's `podman:` provider
+  exports the image being scanned into `/tmp`; on a memory-backed tmpfs that
+  export counts against the container's memory cgroup, and a ~1 GB image OOM-kills
+  the scan even at an 8 GB limit. A disk-backed `/tmp` volume drops the peak to
+  ~1.3 GB (one scan holds the vuln DB in memory), so 4 GB is comfortable.
+- **`cve.status` is shared through `/var/lib/grype-scan`**, statically labelled
+  `container_file_t` with no MCS category (`semanage fcontext` + `restorecon`,
+  mirroring `/var/lib/deployer`) and mounted with **no `:z/:Z`** by both this
+  oneshot (rw) and the nagios-agent container (ro). `ExecStartPost restorecon`
+  re-asserts that label on the output every run.
+- The nagios-agent check reads `cve.status` with `STATUS=/var/lib/grype-scan/cve.status`
+  set on its nrpe command.
