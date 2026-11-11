@@ -1,0 +1,82 @@
+# Gatehouse — fork-safe code review + workflow protection, in ONE file.
+#
+# Nothing is ever checked out from the PR. The fork's change is only ever read as
+# a diff (data); the reviewer logic lives in the pinned gatehouse container; the
+# rules (styleguide/constitution) are fetched from the base branch, not the PR.
+#
+# Three jobs with DIFFERENT authority:
+#   • guard   — a real blocking gate. REQUIRED status check: rejects a PR that
+#               tampers with workflow files.
+#   • review  — ADVISORY. Posts findings as PR comments and always passes; do
+#               NOT mark it required.
+#   • triage  — deterministic. Fails while any finding has no reply. Safe to
+#               mark REQUIRED: it never judges code, only whether a human answered.
+
+name: Gatehouse
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  # GENESIS BOOTSTRAP ONLY — removed immediately after the first merge.
+  # The org ruleset requires the `Protect workflows` and `Gatehouse triage`
+  # checks, which are pull_request_target jobs that run from the BASE branch.
+  # On a brand-new repo the base (main) has no workflows, so they never run and
+  # the first PR can never satisfy the ruleset. Triggering them on pull_request
+  # for this one PR runs them from the head (which has this file), they pass,
+  # and the follow-up PR restores pull_request_target-only so a fork cannot run
+  # its own edited guard. See RT #1551.
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
+
+permissions: {}   # default-deny; each job grants only what it needs
+
+jobs:
+  guard:
+    name: Protect workflows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Reject workflow changes from untrusted PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          if [ "$HEAD_REPO" = "$GITHUB_REPOSITORY" ]; then
+            echo "Head branch is in $GITHUB_REPOSITORY; allowing."; exit 0
+          fi
+          changed="$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)')"
+          if echo "$changed" | grep -qE '^\.github/workflows/'; then
+            echo "::error::PR modifies .github/workflows/ — not accepted from external contributors."
+            if [ "$EVENT" = "pull_request_target" ]; then
+              gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body \
+                $'🚫 **Workflow changes are not accepted via pull request.** Please open an issue and a maintainer will make the change.'
+            fi
+            exit 1
+          fi
+          echo "No workflow files changed."
+
+  review:
+    name: Gatehouse review
+    if: github.event_name == 'pull_request_target'
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: crunchtools/gatehouse/.github/workflows/review.yml@v0
+    secrets:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+
+  triage:
+    name: Gatehouse triage
+    needs: review
+    if: always()
+    permissions:
+      pull-requests: read
+    uses: crunchtools/gatehouse/.github/workflows/triage.yml@v0

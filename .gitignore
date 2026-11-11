@@ -1,0 +1,4 @@
+# local scan output / scratch
+*.status
+/tmp/
+cve.status
