@@ -1,39 +1,50 @@
-# grype fleet CVE scanner — oneshot. Fired by Kagetora every 6h (not a systemd
-# timer: Kagetora is the clock for this class of job, same as the deploy queue
-# trigger). Writes cve.status to a host dir the nagios-agent container also
-# mounts, so the check reads what this run wrote.
+# /srv copy: /srv/grype.crunchtools.com/config/grype.crunchtools.com.service
 #
-# Template — the grype-unit program item finalises paths, SELinux labels and the
-# DB/state volumes against the live host. Env (image tag, etc.) comes from the
-# env file, never from values committed here (constitution XVII).
+# A ONESHOT, not a server. Kagetora's 6h timer starts this; it scans the fleet
+# with grype and exits. It writes cve.status to the SHARED /var/lib/grype-scan,
+# statically labelled container_file_t with NO MCS category and mounted with NO
+# :z/:Z, so the confined nagios-agent container can also read it — the same
+# cross-container pattern as /var/lib/deployer. ExecStartPost restorecon's the
+# output on the host so the file always carries that shared label regardless of
+# how the container wrote it.
 #
-# This oneshot's OWN image is not moved by podman-auto-update (oneshots are not
-# running at 03:00) nor by the deployer (it deploys long-running units). It is
-# updated the same way the deployer's image is: deliberately, by the deploy
-# flow, from a release tag.
+# PINNED to a release tag, and NO io.containers.autoupdate label: like the
+# deployer, a oneshot is not running at 03:00, so nothing auto-updates it;
+# upgrading it is a /srv commit and a `systemctl daemon-reload` by a person who
+# read the changelog.
+#
+# WHY label=disable. The scanner's podman provider reads images through the
+# podman socket, which is root-equivalent; a confining type would add nothing
+# over the authority the socket already grants, and disable lets it write the
+# shared dir and read the DB cache without per-mount relabel churn. Same
+# reasoning the deployer unit records for its own socket access.
 
 [Unit]
-Description=grype fleet CVE scanner (RT #1551)
-Wants=network-online.target
-After=network-online.target
+Description=Podman container - grype.crunchtools.com (fleet CVE scanner, oneshot)
+Documentation=https://github.com/crunchtools/grype
+Requires=podman.socket
+After=network-online.target podman.socket
 
 [Service]
 Type=oneshot
-EnvironmentFile=/etc/sysconfig/grype.crunchtools.com
-# Scan the LOCAL podman store first (no re-pull on a 6h cadence; the local
-# digest is what production actually runs), so the host podman socket is mounted
-# read-only and named to grype's podman provider.
-ExecStart=/usr/bin/podman run --rm \
-  --name grype-scan \
-  --security-opt label=disable \
-  --read-only --tmpfs /tmp \
-  -v /run/podman/podman.sock:/run/podman/podman.sock:ro \
-  -e CONTAINER_HOST=unix:///run/podman/podman.sock \
-  -v grype-db:/var/cache/grype \
-  -v /srv/grype.crunchtools.com/state:/var/lib/grype-scan:z \
-  -v /srv/grype.crunchtools.com/fleet-images.conf:/etc/grype/fleet-images.conf:ro \
-  ${GRYPE_IMAGE} cve-scan
 TimeoutStartSec=1800
+ExecStartPre=-/usr/bin/podman rm -f grype.crunchtools.com
+ExecStart=/usr/bin/podman run --rm --name grype.crunchtools.com \
+    --label PODMAN_SYSTEMD_UNIT=grype.crunchtools.com.service \
+    --security-opt label=disable \
+    --read-only -v grype-tmp:/tmp -e TMPDIR=/tmp \
+    --memory=4g --memory-swap=4g \
+    -e CONTAINER_HOST=unix:///run/podman/podman.sock \
+    -e STATE_DIR=/var/lib/grype-scan \
+    -e FLEET_CONF=/etc/grype/fleet-images.conf \
+    -v /run/podman/podman.sock:/run/podman/podman.sock \
+    -v grype-db:/var/cache/grype \
+    -v /var/lib/grype-scan:/var/lib/grype-scan \
+    -v /srv/grype.crunchtools.com/config/fleet-images.conf:/etc/grype/fleet-images.conf:ro \
+    quay.io/crunchtools/grype:0.1.0 \
+    cve-scan
+ExecStartPost=/usr/sbin/restorecon -RF /var/lib/grype-scan
+ExecStopPost=-/usr/bin/podman rm -f grype.crunchtools.com
 
 [Install]
 WantedBy=multi-user.target
