@@ -42,6 +42,8 @@ jobs:
         grep -q 'total=8' <<<"$out"
         grep -q 'fix_crit=2' <<<"$out"
         grep -q 'rce=2' <<<"$out"
+        f=$(podman run --rm -i "$IMAGE" cve-findings < tests/fixtures/sample-grype.json)
+        grep -q 'pkg=node type=binary' <<<"$f"
     secrets:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}

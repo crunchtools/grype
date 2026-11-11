@@ -42,5 +42,15 @@ echo "# empty matches"
 empty_line=$(printf '{"matches":[]}' | "$CLASSIFY")
 check "empty total" "0" "$(sed -nE 's/.*(^| )total=([^ ]+).*/\2/p' <<<"$empty_line")"
 
+# --- cve-findings: the per-fixable-Critical bump detail -----------------------
+FINDINGS="$root/rootfs/usr/local/bin/cve-findings"
+echo "# cve-findings against sample-grype.json (2 fixable criticals: a deb and an embedded binary)"
+findings=$("$FINDINGS" < "$FIXTURE")
+check "findings line count"        "2" "$(grep -c . <<<"$findings")"
+check "deb finding (libtest)"      "cve=CVE-TEST-0001 pkg=libtest type=deb installed=1.0.0 fix=1.2.3 net=1 path=/var/lib/dpkg/status" "$(grep 'pkg=libtest' <<<"$findings")"
+check "embedded-binary (node)"     "cve=CVE-TEST-0002 pkg=node type=binary installed=25.2.1 fix=2.0.0 net=1 path=/usr/local/bin/node" "$(grep 'pkg=node' <<<"$findings")"
+check "findings empty on clean"    "" "$(printf '{"matches":[]}' | "$FINDINGS")"
+check "findings skip non-fixable"  "0" "$(printf '{"matches":[{"vulnerability":{"id":"X","severity":"Critical","fix":{"state":"not-fixed"}},"artifact":{"name":"p"}}]}' | "$FINDINGS" | grep -c .)"
+
 if [ "$fail" -eq 0 ]; then echo "PASS"; else echo "SOME TESTS FAILED"; fi
 exit "$fail"

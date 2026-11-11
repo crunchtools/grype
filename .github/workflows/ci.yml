@@ -25,6 +25,7 @@ jobs:
           shellcheck \
             rootfs/usr/local/bin/cve-classify \
             rootfs/usr/local/bin/cve-scan \
+            rootfs/usr/local/bin/cve-findings \
             tests/test_classify.sh
       - name: Classifier unit tests
         run: tests/test_classify.sh
