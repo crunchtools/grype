@@ -41,7 +41,7 @@ ExecStart=/usr/bin/podman run --rm --name grype.crunchtools.com \
     -v grype-db:/var/cache/grype \
     -v /var/lib/grype-scan:/var/lib/grype-scan \
     -v /srv/grype.crunchtools.com/config/fleet-images.conf:/etc/grype/fleet-images.conf:ro \
-    quay.io/crunchtools/grype:0.1.0 \
+    quay.io/crunchtools/grype:0.2.0 \
     cve-scan
 ExecStartPost=/usr/sbin/restorecon -RF /var/lib/grype-scan
 ExecStopPost=-/usr/bin/podman rm -f grype.crunchtools.com
