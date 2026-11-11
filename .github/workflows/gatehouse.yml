@@ -17,6 +17,16 @@ name: Gatehouse
 on:
   pull_request_target:
     types: [opened, synchronize, reopened]
+  # GENESIS BOOTSTRAP ONLY — removed immediately after the first merge.
+  # The org ruleset requires the `Protect workflows` and `Gatehouse triage`
+  # checks, which are pull_request_target jobs that run from the BASE branch.
+  # On a brand-new repo the base (main) has no workflows, so they never run and
+  # the first PR can never satisfy the ruleset. Triggering them on pull_request
+  # for this one PR runs them from the head (which has this file), they pass,
+  # and the follow-up PR restores pull_request_target-only so a fork cannot run
+  # its own edited guard. See RT #1551.
+  pull_request:
+    types: [opened, synchronize, reopened]
   pull_request_review_comment:
     types: [created, edited, deleted]
 
