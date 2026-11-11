@@ -1,0 +1,30 @@
+# Fast host-side gate: shellcheck the scripts and run the classifier unit tests
+# (bash + jq, no image, no grype, no network). The container build gates the
+# shipped image; this gates the logic on every push.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: shellcheck + classifier tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck and jq
+        run: sudo apt-get update && sudo apt-get install -y shellcheck jq
+      - name: Shellcheck
+        run: |
+          shellcheck \
+            rootfs/usr/local/bin/cve-classify \
+            rootfs/usr/local/bin/cve-scan \
+            tests/test_classify.sh
+      - name: Classifier unit tests
+        run: tests/test_classify.sh

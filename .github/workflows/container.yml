@@ -1,0 +1,47 @@
+# Container release: build once, gate the digest, promote what was tested
+# (constitution container-image VII).
+
+name: Container
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  schedule:
+    - cron: "17 4 * * 1"   # weekly: base-image + grype errata, gated like any build
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  container:
+    uses: crunchtools/constitution/.github/workflows/container-release.yml@v1.39.3
+    permissions:
+      contents: read
+      pull-requests: read
+    with:
+      image: quay.io/crunchtools/grype
+      # The binary is present and runnable. The scanner needs a DB and a podman
+      # socket it cannot have in the gate container, so booting the full scan is
+      # not the gate; `grype version` proving the image works is.
+      boot: command
+      boot-command: |
+        podman run --rm "$IMAGE" grype version
+      # Contract: the digest holds what it promises, and the SHIPPED classifier
+      # produces the known counts on the committed fixture.
+      contract-test: |
+        set -euo pipefail
+        podman run --rm "$IMAGE" bash -c '
+          command -v grype >/dev/null \
+            && test -x /usr/local/bin/cve-scan \
+            && test -x /usr/local/bin/cve-classify \
+            && test -f /etc/grype/fleet-images.conf'
+        out=$(podman run --rm -i "$IMAGE" cve-classify < tests/fixtures/sample-grype.json)
+        echo "$out"
+        grep -q 'total=8' <<<"$out"
+        grep -q 'fix_crit=2' <<<"$out"
+        grep -q 'rce=2' <<<"$out"
+    secrets:
+      QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}

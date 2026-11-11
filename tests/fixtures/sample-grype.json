@@ -1,0 +1,62 @@
+{
+  "_comment": "Hand-built minimal grype report. Covers every branch the classifier takes, with deterministic expected counts asserted in tests/test_classify.sh. Not real grype output; the real schema is verified against grype 0.121.3 (matches[].vulnerability.{severity,fix.state,fix.versions,cvss[].vector}).",
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-TEST-0001", "severity": "Critical",
+        "fix": { "state": "fixed", "versions": ["1.2.3"] },
+        "cvss": [ { "version": "3.1", "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "metrics": { "baseScore": 9.8 } } ]
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-TEST-0002", "severity": "Critical",
+        "fix": { "state": "fixed", "versions": ["2.0.0"] },
+        "cvss": []
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-TEST-0003", "severity": "Critical",
+        "fix": { "state": "not-fixed", "versions": [] },
+        "cvss": [ { "version": "3.1", "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H", "metrics": { "baseScore": 7.0 } } ]
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-TEST-0004", "severity": "High",
+        "fix": { "state": "fixed", "versions": ["3.4.5"] },
+        "cvss": [ { "version": "3.1", "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N", "metrics": { "baseScore": 7.5 } } ]
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-TEST-0005", "severity": "High",
+        "fix": { "state": "not-fixed", "versions": [] },
+        "cvss": []
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-TEST-0006", "severity": "Medium",
+        "fix": { "state": "fixed", "versions": ["0.9.1"] },
+        "cvss": []
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-TEST-0007", "severity": "Low",
+        "fix": { "state": "wont-fix", "versions": [] },
+        "cvss": []
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-TEST-0008", "severity": "",
+        "fix": { "state": "fixed", "versions": ["5.5.5"] },
+        "cvss": []
+      }
+    }
+  ],
+  "source": { "type": "image", "target": { "userInput": "example:latest" } }
+}

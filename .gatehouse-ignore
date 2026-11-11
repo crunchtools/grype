@@ -1,0 +1,4 @@
+# Paths Gatehouse never reviews (gitignore syntax). Read from the base branch in CI.
+
+# Verbatim AGPL-3.0 text. Not ours and not under review.
+LICENSE
