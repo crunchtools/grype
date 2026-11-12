@@ -3,7 +3,7 @@
 > **Version:** 1.0.0
 > **Ratified:** 2026-11-11
 > **Status:** Active
-> **Inherits:** [crunchtools/constitution](https://github.com/crunchtools/constitution) v1.39.3
+> **Inherits:** [crunchtools/constitution](https://github.com/crunchtools/constitution) v1.40.0
 > **Profile:** Container Image
 
 ## What this image provides
