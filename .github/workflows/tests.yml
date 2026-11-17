@@ -2,7 +2,7 @@
 # (bash + jq, no image, no grype, no network). The container build gates the
 # shipped image; this gates the logic on every push.
 
-name: CI
+name: Tests
 
 on:
   pull_request:
