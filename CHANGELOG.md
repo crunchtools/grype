@@ -7,6 +7,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- `fleet-images.conf` scans `quay.io/crunchtools/newsletter` and
+  `quay.io/crunchtools/spanish`, the new names of `kill-the-newsletter` and
+  `mundo-de-palabras` (a1401). The old Quay repositories are being deleted.
 - Gatehouse triage gets `review_result` from the review job, so a pull request
   whose review died before posting anything is held instead of passing.
 - The container release runs constitution v1.51.0's `container-release.yml`
