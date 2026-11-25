@@ -1,2 +1,39 @@
 [tool.sdlc]
 repo-kinds = ["container-image"]
+
+[tool.sdlc.image]
+# Written by crunchtools/sdlc's scripts/convert_repo.py: moved from the workflows.
+image = "quay.io/crunchtools/grype"
+boot = "none"
+boot-none-reason = "no service to boot: the image runs one-shot verbs. The ci checks image-version and contract run the built image"
+
+[tool.sdlc.ci]
+checks = ["shellcheck", "classify-tests", "grype-image", "image-version", "contract"]
+
+# Was tests.yml: shellcheck the shipped scripts and the test, then the
+# classifier's unit tests (bash + jq, which the gate image carries).
+[tool.sdlc.ci.shellcheck]
+kind = "command"
+image = "docker.io/koalaman/shellcheck@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d"  # v0.11.0
+argv = ["/bin/shellcheck", "rootfs/usr/local/bin/cve-classify", "rootfs/usr/local/bin/cve-scan", "rootfs/usr/local/bin/cve-findings", "tests/test_classify.sh", "tests/image/contract.sh"]
+
+[tool.sdlc.ci.classify-tests]
+kind = "command"
+argv = ["bash", "tests/test_classify.sh"]
+
+# Was container.yml's boot-command and contract-test, which sdlc 0.15's image
+# job does not run (crunchtools/sdlc#118): the same assertions, against the
+# image this change builds.
+[tool.sdlc.ci.grype-image]
+kind = "image-build"
+tag = "localhost/grype:test"
+
+[tool.sdlc.ci.image-version]
+kind = "command"
+image = "localhost/grype:test"
+argv = ["grype", "version"]
+
+[tool.sdlc.ci.contract]
+kind = "command"
+image = "localhost/grype:test"
+argv = ["bash", "tests/image/contract.sh"]
